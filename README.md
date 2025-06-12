@@ -12,13 +12,33 @@ It primary helps in isolating problematic message, prevent queue clogging from r
 
 ## How to enable notification to your email when messages are added to the DLQ?
 
-A few methods would allow us to achieve that. One of the recommended way is to create another SNS subscription and then enable redrive policy for DLQ (this is optional configuration when creating subscription).
+A few methods would allow us to achieve that. One of the recommended way is to create SNS topic, subcribe your email to the topic, configure SQS DLQ (see below) to publish to SNS when message arrive.
 
 From console:
 Go to SQS → Select your DLQ → Configure Queue → Dead-Letter Queue tab).
 Enable "Redrive Allow Policy" (if not set).
 Under "Notifications", link the SNS topic that was configured.
+Make sure that queue policies has been set up to allow SQS to publish messages to SNS topic.
 
+```json
 {
-"deadLetterTargetArn": "arn:aws:sqs:ap-southeast-1:255945442255:growfat-work-queue"
+  "Version": "2012-10-17",
+  "Id": "AllowSQSToPublishToSNS",
+  "Statement": [
+    {
+      "Sid": "AllowSQSToSendToSNSTopic",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "sqs.amazonaws.com"
+      },
+      "Action": "sns:Publish",
+      "Resource": "arn:aws:sns:REGION:ACCOUNT_ID:YOUR_SNS_TOPIC_NAME",
+      "Condition": {
+        "ArnEquals": {
+          "aws:SourceArn": "arn:aws:sqs:REGION:ACCOUNT_ID:YOUR_DLQ_NAME"
+        }
+      }
+    }
+  ]
 }
+```
